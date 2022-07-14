@@ -1,0 +1,68 @@
+#name="DirectoryTest"
+#format=10
+#description = "Hello world!"
+
+@file("setup"){
+    sos=score dummy
+    @folder("test"){
+        sas = score dummy
+    }
+    sis  =  score dummy
+}
+
+pointer_1=entity "@e[type=armor_stand,name="Pointer of things",scores={sos=1,sas=2..3}]"
+pointer_2=entity "@a[gamemode=creative]"
+
+number=literal "1"
+number=int 1
+
+scoreboard players add <pointer_<number>> sos <number>
+
+number=literal "2"
+scoreboard players add <pointer_<number>> sos <number>
+
+execute as <pointer_1> at @s run say Hello world
+
+@file("scoreAssign"){
+    pointer_1.sos=10
+    pointer_2.sos=123
+    pointer_1.sis=1
+}
+
+@at(pointer_1){
+    pointer_1.sos=pointer_2.sos
+    pointer_1.sos+=pointer_2.sos
+    pointer_2.sos+=1
+
+    @as("@s"){
+        scoreboard players add @a[distance=..10] sos 1
+
+        @at("@e[type=!player]"){
+            kill @s
+        }
+    }
+}
+
+pointer_2.sos=<number>
+
+@if(pointer_1.sos==1 && pointer_1.sis<=1){
+    execute as <pointer_1> at @s run say Yo
+}
+
+@for(block in ["stone","dirt"]){
+    @file("break_$block$")
+
+    execute as $pointer$ at @s if block - - - minecraft:$block$ run setblock - - - air
+    @endcontext()
+}
+
+@def exAsAt(entity){
+    execute as $entity$ at @s
+}
+
+while(pointer.sos<5){
+    <exAsAt(<pointer>)> run tp @s - - -1
+}
+while(pointer.sos<pointer.sis){
+    $exAsAt$ run tp @s -1 - -
+}

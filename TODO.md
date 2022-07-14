@@ -1,0 +1,2 @@
+- Change all switchContext references to newCopyContext and make it so that literals are copied; occupies more memory, but saves a lot on performance.
+- Make linePrefixes get copied when changing context.
