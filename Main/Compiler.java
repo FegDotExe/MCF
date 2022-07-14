@@ -30,6 +30,8 @@ public class Compiler{
 
     public Hashtable<String, CustomFunction> customFunctions;
 
+    private String literalCharacter="[^\\s\\.\\+\\-\\=<>]";
+
     private boolean baseCreated=false; //Wether the base of the datapack has been created or not
 
     public Compiler(String path,int logDepth){
@@ -75,22 +77,22 @@ public class Compiler{
             }
         });
         customFunctions.put("at", (str, cmp)->{//Execute all the context at a certain entity
-            Entity entity=Entity.stringToEntity(str, cmp);
+            Entity entity=Entity.stringToType(str, cmp);
             if(entity==null){
                 cmp.throwException("The given value is not an entity.");
             }
 
             cmp.addContext();
-            cmp.currentContext.linePrefix.Add("at", entity.toString());
+            cmp.currentContext.linePrefix.Add("at", entity.typeToString(cmp));
         });
         customFunctions.put("as", (str, cmp)->{//Execute all the context at a certain entity
-            Entity entity=Entity.stringToEntity(str, cmp);
+            Entity entity=Entity.stringToType(str, cmp);
             if(entity==null){
                 cmp.throwException("The given value is not an entity.");
             }
 
             cmp.addContext();
-            cmp.currentContext.linePrefix.Add("as", entity.toString());
+            cmp.currentContext.linePrefix.Add("as", entity.typeToString(cmp));
         });
     }
 
@@ -180,37 +182,38 @@ public class Compiler{
         Matcher scoreDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*score\\s*([^\\s]*)").matcher(line); //<name>=score <scoreType>
         if(scoreDeclaration.find()){
             contextAppend("scoreboard objectives add "+scoreDeclaration.group(1)+" "+scoreDeclaration.group(2)+"\n");
-            setBaseLiteral(scoreDeclaration.group(1), new Score(scoreDeclaration.group(1)));
+            setBaseLiteral(scoreDeclaration.group(1), (ScriptElement<?>)new Score(scoreDeclaration.group(1)));
             return;
         }
 
         Matcher entityDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*entity\\s*(\"?.*\"?)\\z").matcher(line); //<name>=entity "<entityString>"
         if(entityDeclaration.find()){
             log("Declared new entity: "+entityDeclaration.group(2),4);
-            Entity thisEntity=Entity.stringToEntity(entityDeclaration.group(2), compiler);
+            Entity thisEntity=Entity.stringToType(entityDeclaration.group(2), compiler);
             getContext().literals.put(entityDeclaration.group(1),thisEntity);
             return;
         }
 
         Matcher literalDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*literal\\s*\"(.*)\"\\z").matcher(line); //<name>=literal "<literalString>"
         if(literalDeclaration.find()){
-            getContext().literals.put(literalDeclaration.group(1),literalDeclaration.group(2));
+            getContext().literals.put(literalDeclaration.group(1),LiteralString.stringToType(literalDeclaration.group(2), this));
             return;
         }
         
         Matcher intDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*int\\s*(\\d*)\\z").matcher(line); //<name>=int <value>
         if(intDeclaration.find()){
-            getContext().literals.put(intDeclaration.group(1), Integer.parseInt(intDeclaration.group(2)));
+            getContext().literals.put(intDeclaration.group(1), LiteralInt.stringToType(intDeclaration.group(2),this));
             return;
         }
 
-        Matcher assignation=Pattern.compile("\\s*([^\\s\\.\\+\\-]*)\\.([^\\s\\.\\+\\-]*)\\s*=\\s*(.*)\\z").matcher(line); //<selector>.<value>=<selector>.<value>
+        Matcher assignation=Pattern.compile("\\s*("+literalCharacter+"*)\\.(["+literalCharacter+"]*)\\s*=\\s*(.*)\\z").matcher(line); //<selector>.<value>=<selector>.<value>
         if(assignation.find()){
-            Object literal1=getLiteral(assignation.group(1));
+            //Entity and score
+            Entity literal1=Entity.stringToType(assignation.group(1),this);
             Object literal2=getLiteral(assignation.group(2));
 
-            if(literal1 instanceof Entity && literal2 instanceof Score){
-                assignEntityScore((Entity)literal1,(Score)literal2,assignation.group(3));
+            if(literal1!=null && literal2 instanceof Score){
+                assignEntityScore(literal1,(Score)literal2,assignation.group(3));
             }else{
                 throwException("The value assignation is not valid.");
             }
@@ -250,18 +253,20 @@ public class Compiler{
 
     private String substituteLiterals(String line){
         while(true){
-            Matcher literal=Pattern.compile("<([^\\s<>]*?)>").matcher(line); //TODO: enable this to substitute all literals
+            Matcher literal=Pattern.compile("<("+literalCharacter+"*?)>").matcher(line);
             if(literal.find()){
                 //Another substitution
                 int i=0;
                 while(true){
+                    log("Replacing literal "+literal.group(1),4);
                     Context context=getContext(i);
                     if(context==null){
                         throwException("The literal \""+literal.group(1)+"\" has not been declared.");
                     }
-                    Object value=context.literals.get(literal.group(1));
+                    ScriptElement<?> value=context.literals.get(literal.group(1));
                     if(value!=null){
-                        line=line.replaceAll("(<"+literal.group(1)+">)", value.toString());
+                        line=line.replaceAll("(<"+literal.group(1)+">)", value.typeToString(this));
+                        log("Replaced literal "+literal.group(1)+" with "+value.typeToString(this),4);
                         break;
                     }else{
                         i++;
@@ -306,7 +311,7 @@ public class Compiler{
         // log(currentContext.toString(),0);
 
         for(int i=0; i<index;i++){
-            if(output.previousContext==null){
+            if(output.previousContext==null){ //FIXME: this should return null when context is too big.
                 return output;
             }
             output=output.previousContext;
@@ -337,7 +342,7 @@ public class Compiler{
      * @param name The name of the literal
      * @return The literal object
      */
-    public Object getLiteral(String name){
+    public ScriptElement<?> getLiteral(String name){
         return getLiteral(name,true);
     }
     /**
@@ -346,11 +351,11 @@ public class Compiler{
      * @param exception Wether to throw an exception or not if the literal is not found; if set to false and the literal is not found, null is returned.
      * @return The literal object
      */
-    public Object getLiteral(String name,boolean exception){
+    public ScriptElement<?> getLiteral(String name,boolean exception){
         int i=0;
         while(true){
             Context context=getContext(i);
-            Object value=context.literals.get(name);
+            ScriptElement<?> value=context.literals.get(name);
 
             if(value!=null){
                 return value;
@@ -365,10 +370,10 @@ public class Compiler{
             }
         }
     }
-    public void setLiteral(String name, Object value){
+    public void setLiteral(String name, ScriptElement<?> value){
         getContext().literals.put(name, value);
     }
-    public void setBaseLiteral(String name,Object value){
+    public void setBaseLiteral(String name,ScriptElement<?> value){
         defaultContext.literals.put(name,value);
     }
 
@@ -498,20 +503,26 @@ public class Compiler{
     }
 
     //Assignation
+    /**
+     * Assign a value to an entity's score.
+     * @param entity The entity whose score is to be set.
+     * @param score The score to be set.
+     * @param value The value which will be set.
+     */
     private void assignEntityScore(Entity entity, Score score, String value){
         Matcher digits=Pattern.compile("(^\\d\\d*)").matcher(value);
         if(digits.find()){
-            contextAppend("scoreboard players set "+entity+" "+score+" "+value+"\n");
+            contextAppend("scoreboard players set "+entity.typeToString(this)+" "+score.typeToString(this)+" "+value+"\n");
             return;
         }
 
         Matcher entityScore=Pattern.compile("([^\\s\\.\\+\\-]*)\\.([^\\s\\.\\+\\-]*)").matcher(value);
         if(entityScore.find()){
-            Object literal1=getLiteral(entityScore.group(1));
-            Object literal2=getLiteral(entityScore.group(2));
+            Entity literal1=Entity.stringToType(entityScore.group(1),this);
+            ScriptElement<?> literal2=getLiteral(entityScore.group(2));
 
-            if(literal1 instanceof Entity && literal2 instanceof Score){
-                scoreboardOperation(entity.toString(), score.toString(), "=", literal1.toString(), literal2.toString());
+            if(literal1!=null && literal2 instanceof Score){
+                scoreboardOperation(entity.typeToString(this), score.typeToString(this), "=", literal1.typeToString(this), literal2.typeToString(this));
                 
                 return;
             }
@@ -528,17 +539,17 @@ public class Compiler{
     private void sumEntityScore(Entity entity, Score score, String value){
         Matcher digits=Pattern.compile("(^\\d\\d*)").matcher(value);
         if(digits.find()){
-            contextAppend("scoreboard players add "+entity+" "+score+" "+value+"\n");
+            contextAppend("scoreboard players add "+entity.typeToString(this)+" "+score.typeToString(this)+" "+value+"\n");
             return;
         }
 
         Matcher entityScore=Pattern.compile("([^\\s\\.\\+\\-]*)\\.([^\\s\\.\\+\\-]*)").matcher(value);
         if(entityScore.find()){
-            Object literal1=getLiteral(entityScore.group(1));
-            Object literal2=getLiteral(entityScore.group(2));
+            ScriptElement<?> literal1=getLiteral(entityScore.group(1));
+            ScriptElement<?> literal2=getLiteral(entityScore.group(2));
 
             if(literal1 instanceof Entity && literal2 instanceof Score){
-                scoreboardOperation(entity.toString(), score.toString(), "+=", literal1.toString(), literal2.toString());
+                scoreboardOperation(entity.typeToString(this), score.typeToString(this), "+=", literal1.typeToString(this), literal2.typeToString(this));
                 return;
             }
         }

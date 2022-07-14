@@ -18,6 +18,13 @@ number=int 1
 
 scoreboard players add <pointer_<number>> sos <number>
 
+"@a".sos=111
+@as("@a"){
+    @at("@s"){
+        "@s".sos="@e[type=armor_stand,name="Random",sort=random,limit=1]".sos
+    }
+}
+
 number=literal "2"
 scoreboard players add <pointer_<number>> sos <number>
 

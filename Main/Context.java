@@ -2,6 +2,7 @@ package Main;
 
 import java.util.Hashtable;
 
+import Elements.ScriptElement;
 import Main.ContextClasses.LinePrefix;
 
 public class Context {
@@ -13,7 +14,7 @@ public class Context {
     public String subfolder="functions/";
     public String file;
     public String extension=".mcfunction";
-    public Hashtable<String,Object> literals;
+    public Hashtable<String,ScriptElement<?>> literals;
     public LinePrefix linePrefix;
 
     public Context(String dpPath, String folder, String file){
