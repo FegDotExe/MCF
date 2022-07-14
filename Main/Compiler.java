@@ -168,7 +168,7 @@ public class Compiler{
             return;
         }
 
-        Matcher customFunction=Pattern.compile("\\s*@([^\\s]*)\\((.*)\\)").matcher(line);
+        Matcher customFunction=Pattern.compile("\\s*@([^\\s]*)\\((.*)\\)").matcher(line); //@<function>(<arguments>)
         if(customFunction.find()){
             if(customFunctions.get(customFunction.group(1))==null){
                 throwException("The function \""+customFunction.group(1)+"\" does not exist.");
@@ -177,32 +177,34 @@ public class Compiler{
             return;
         }
 
-        Matcher scoreDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*score\\s*([^\\s]*)").matcher(line);
+        Matcher scoreDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*score\\s*([^\\s]*)").matcher(line); //<name>=score <scoreType>
         if(scoreDeclaration.find()){
             contextAppend("scoreboard objectives add "+scoreDeclaration.group(1)+" "+scoreDeclaration.group(2)+"\n");
             setBaseLiteral(scoreDeclaration.group(1), new Score(scoreDeclaration.group(1)));
             return;
         }
 
-        Matcher entityDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*entity\\s*\"(.*)\"\\z").matcher(line);
+        Matcher entityDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*entity\\s*(\"?.*\"?)\\z").matcher(line); //<name>=entity "<entityString>"
         if(entityDeclaration.find()){
-            Entity thisEntity=new Entity(entityDeclaration.group(2),this);
+            log("Declared new entity: "+entityDeclaration.group(2),4);
+            Entity thisEntity=Entity.stringToEntity(entityDeclaration.group(2), compiler);
             getContext().literals.put(entityDeclaration.group(1),thisEntity);
             return;
         }
 
-        Matcher literalDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*literal\\s*\"(.*)\"\\z").matcher(line);
+        Matcher literalDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*literal\\s*\"(.*)\"\\z").matcher(line); //<name>=literal "<literalString>"
         if(literalDeclaration.find()){
             getContext().literals.put(literalDeclaration.group(1),literalDeclaration.group(2));
             return;
         }
-        Matcher intDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*int\\s*(\\d*)\\z").matcher(line);
+        
+        Matcher intDeclaration=Pattern.compile("\\s*([^\\s]*)\\s*=\\s*int\\s*(\\d*)\\z").matcher(line); //<name>=int <value>
         if(intDeclaration.find()){
             getContext().literals.put(intDeclaration.group(1), Integer.parseInt(intDeclaration.group(2)));
             return;
         }
 
-        Matcher assignation=Pattern.compile("\\s*([^\\s\\.\\+\\-]*)\\.([^\\s\\.\\+\\-]*)\\s*=\\s*(.*)\\z").matcher(line);
+        Matcher assignation=Pattern.compile("\\s*([^\\s\\.\\+\\-]*)\\.([^\\s\\.\\+\\-]*)\\s*=\\s*(.*)\\z").matcher(line); //<selector>.<value>=<selector>.<value>
         if(assignation.find()){
             Object literal1=getLiteral(assignation.group(1));
             Object literal2=getLiteral(assignation.group(2));
@@ -216,7 +218,7 @@ public class Compiler{
             return;
         }
 
-        Matcher sum=Pattern.compile("\\s*([^\\s\\.\\+\\-]*)\\.([^\\s\\.\\+\\-]*)\\s*\\+=\\s*(.*)\\z").matcher(line);
+        Matcher sum=Pattern.compile("\\s*([^\\s\\.\\+\\-]*)\\.([^\\s\\.\\+\\-]*)\\s*\\+=\\s*(.*)\\z").matcher(line); //<selector>.<value>+=<selector>.<value>
         if(sum.find()){
             Object literal1=getLiteral(sum.group(1));
             Object literal2=getLiteral(sum.group(2));

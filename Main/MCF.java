@@ -9,7 +9,7 @@ public class MCF {
             path="script.mcf";
         }
 
-        Compiler compiler=new Compiler(path,3);
+        Compiler compiler=new Compiler(path,4);
         compiler.compile();
     }
 }
