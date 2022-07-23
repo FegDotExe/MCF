@@ -9,9 +9,9 @@ In order to write a MCF script, you'll need to create a `.mcf` file, with a name
 # Command line arguments
 When you launch the compiler through `java -jar MCF.jar <yourScript>.mcf`, you can add command line arguments to customize the compiler's behavior.
 
-Taking the `-verbose` command line argument as an example, if you run `java -jar MCF.jar script.mcf -verbose`, the output logging will be verbose.
+Taking the `-logDepth` command line argument as an example, if you run `java -jar MCF.jar script.mcf -logDepth 3`, the output logging will be verbose.
 
-You can use as many command line arguments as you want, making sure to separate them with a space (ex: `java -jar MCF.jar script.mcf -verbose -noNewDirPrompt`)
+You can use as many command line arguments as you want, making sure to separate them with a space (ex: `java -jar MCF.jar script.mcf -logDepth 3 -noNewDirPrompt`)
 
 ## logPrefix
 **Usage**: `-logPrefix`  
