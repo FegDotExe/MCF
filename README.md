@@ -14,7 +14,7 @@ Taking the `-verbose` command line argument as an example, if you run `java -jar
 You can use as many command line arguments as you want, making sure to separate them with a space (ex: `java -jar MCF.jar script.mcf -verbose -noNewDirPrompt`)
 
 ## logPrefix
-**Usage**: `-logPrefix`
+**Usage**: `-logPrefix`  
 **Effect**: Enables log prefixes, which explicit if the message is either:
 1. An exception (`EXC`)
 2. A warning (`WRN`)
@@ -25,11 +25,11 @@ You can use as many command line arguments as you want, making sure to separate 
 A log message would for example change from "`This is an exception.`" to "`EXC: This is an exception.`"
 
 ## noNewDirPrompt
-**Usage**: `-noNewDirPrompt`
+**Usage**: `-noNewDirPrompt`  
 **Effect**: Disables the prompt which asks you if you want to create a new directory. When this setting is disabled, all directories are automatically created.
 
 ## logDepth
-**Usage**: `-logDepth <numericValue>`
+**Usage**: `-logDepth <numericValue>`  
 **Effect**: sets the logging depth to the specified value (0=Exceptions, 1=Warnings, 2=Infos, 3=Verbose, 4=Extremely verbose)
 
 # Syntax
