@@ -1,11 +1,36 @@
 # What's MCF
 MCF, which could stand either for *MineCraft Fast* or for *MCFunction*, is a scripting language made to greatly simplify the process of writing minecraft datapacks.
 
-In order to write a MCF script, you'll need to create a `.mcf` file, with a name of choice.
+In order to write a MCF script, you'll need to create a `.mcf` file, with a name of choice. You'll then need to compile such file using the compiler, which you can find in the *releases* page of this repository.
 
-**Assuming both the compiler and the script are in the same direcotry**, if you want to compile the script to a minecraft datapack, you'll need to choose one of the following:
+**Assuming both the compiler and the script are in the same directory**, if you want to compile the script to a minecraft datapack, you'll need to choose one of the following:
 1. If you named your file `script.mcf`, you can just double click on the compiler jar (which you can download from the *releases* page of this repository); this way, you won't get output feedback, so you won't know if the script compiled successfully.
-2. From a terminal of choice, you can change the directory to the one the files are in and then run `java -jar MCF.jar <yourScript>.mcf`. This way you'll be able to get output feedback *and* to select a custom-named script.
+2. From a terminal of choice, you can change the directory to the one the files are in and then run `java -jar MCF.jar <yourScript>.mcf`. This way you'll be able to get output feedback, to select a custom-named script *and* to add command line arguments, which are listed below.
+# Command line arguments
+When you launch the compiler through `java -jar MCF.jar <yourScript>.mcf`, you can add command line arguments to customize the compiler's behavior.
+
+Taking the `-verbose` command line argument as an example, if you run `java -jar MCF.jar script.mcf -verbose`, the output logging will be verbose.
+
+You can use as many command line arguments as you want, making sure to separate them with a space (ex: `java -jar MCF.jar script.mcf -verbose -noNewDirPrompt`)
+
+## logPrefix
+**Usage**: `-logPrefix`
+**Effect**: Enables log prefixes, which explicit if the message is either:
+1. An exception (`EXC`)
+2. A warning (`WRN`)
+3. An info (`INF`)
+4. A verbose info (`VRB`)
+5. An extremely verbose info (`XVB`)
+
+A log message would for example change from "`This is an exception.`" to "`EXC: This is an exception.`"
+
+## noNewDirPrompt
+**Usage**: `-noNewDirPrompt`
+**Effect**: Disables the prompt which asks you if you want to create a new directory. When this setting is disabled, all directories are automatically created.
+
+## logDepth
+**Usage**: `-logDepth <numericValue>`
+**Effect**: sets the logging depth to the specified value (0=Exceptions, 1=Warnings, 2=Infos, 3=Verbose, 4=Extremely verbose)
 
 # Syntax
 ## Metadata

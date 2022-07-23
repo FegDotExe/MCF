@@ -20,7 +20,7 @@ public class Context {
     public Context(String dpPath, String folder, String file){
         this(dpPath,folder,"functions/",file,".mcfunction");
     }
-    public Context(String dpPath, String folder, String subfolder, String file, String extension){
+    public Context(String dpPath, String folder, String subfolder, String file, String extension){ //Only used to create the base context
         if(dpPath.length()!=0 && (dpPath.charAt(dpPath.length()-1)!='/' && dpPath.charAt(dpPath.length()-1)!='\\')){
             dpPath=dpPath+"/";
         }

@@ -1,32 +1,29 @@
 package Main.ContextClasses;
 
-import java.util.LinkedHashMap;
-import java.util.Set;
+import Elements.*;
+import Main.Compiler;
 
 public class LinePrefix {
-    public LinkedHashMap<String,String> hashtable;
-    private LinePrefix previousLinePrefix;
-    private LinePrefix nextLinePrefix;
+    public static Compiler compiler; //The compiler used to correclty interpret line prefixes
+
+    public String name;
+    public ScriptElement<?> value;
+    public LinePrefix previousLinePrefix;
+    public LinePrefix nextLinePrefix;
 
     public LinePrefix(){
-        hashtable=new LinkedHashMap<String,String>();
-    }
-    public LinePrefix(LinePrefix previousLinePrefix){
-        this.previousLinePrefix=previousLinePrefix;
-        previousLinePrefix.nextLinePrefix=this;
-
-        hashtable=new LinkedHashMap<>();
-
-        // Enumeration<String> en=previousLinePrefix.hashtable.keys();
-        // while(en.hasMoreElements()){
-        //     String key=en.nextElement();
-
-        //     hashtable.put(key, previousLinePrefix.hashtable.get(key));
-        // }
+        this.name="";
+        this.value=null;
     }
 
-    public void Add(String key, String value){
-        hashtable.put(key, value);
+    public LinePrefix(String name, ScriptElement<?> value){ //Only used to create the prefix of the defaultContext
+        this.name=name;
+        this.value=value;
+    }
+
+    public LinePrefix(LinePrefix previous){
+        this.previousLinePrefix=previous;
+        this.previousLinePrefix.nextLinePrefix=this;
     }
 
     /**
@@ -36,62 +33,40 @@ public class LinePrefix {
         this.previousLinePrefix.nextLinePrefix=null;
     }
 
+    public void Set(String name, ScriptElement<?> value){
+        this.name=name;
+        this.value=value;
+    }
+
     public String toString(){
-        LinePrefix selectedPrefix=this;
-        while(selectedPrefix.previousLinePrefix!=null){
-            selectedPrefix=selectedPrefix.previousLinePrefix; //Selects the first line prefix
-        }
-
-        LinkedHashMap<String,String> completeHashtable=new LinkedHashMap<>(); //Compiles a complete hashtable, with all the prefixes in the order they were declared in
-        while(selectedPrefix!=null){
-            Set<String> keys=selectedPrefix.hashtable.keySet();
-            // System.out.println(keys);
-            for(String key: keys){
-                if(completeHashtable.get(key)!=null){
-                    completeHashtable.remove(key);
-                }
-
-                completeHashtable.put(key, selectedPrefix.hashtable.get(key));
-            }
-
-            selectedPrefix=selectedPrefix.nextLinePrefix;
+        if(this.name==null){
+            return "";
         }
 
         String output="";
-        String old="";
+        LinePrefix selectedPrefix=this;
         boolean execute=false;
-
-        Set<String> keys2 = completeHashtable.keySet();
-        // System.out.println(keys2);
-        for(String key: keys2){
-            if(key.equals("old")){
-                old=completeHashtable.get("old");
-            }
-            if(key.equals("as")){
-                output=output+" as "+completeHashtable.get("as");
+        while(selectedPrefix.previousLinePrefix!=null){
+            if(selectedPrefix.name.equals("as")){
+                output=output+" as "+selectedPrefix.value.typeToString(LinePrefix.compiler);
                 execute=true;
-            }
-            if(key.equals("at")){
-                output=output+" at "+completeHashtable.get("at");
+            }else if(selectedPrefix.name.equals("at")){
+                output=output+" at "+selectedPrefix.value.typeToString(LinePrefix.compiler);
                 execute=true;
+            }else if(selectedPrefix.name.equals("old")){
+                return selectedPrefix.value.typeToString(LinePrefix.compiler)+finalString(output, execute);
             }
-        }
 
-        if(execute){
-            output=old+"execute"+output+" run ";
-        }else{
-            output=old+output;
+            selectedPrefix=selectedPrefix.previousLinePrefix; //Selects the first line prefix
         }
-
-        return output;
+        return finalString(output, execute);
     }
 
-    /**
-     * Tests if the prefix has a certain key
-     * @param key The key to search for.
-     * @return True if the prefix has the given key; false otherwise.
-     */
-    public boolean HasKey(String key){
-        return hashtable.get(key)!=null;
+    private String finalString(String baseString, boolean execute){
+        if(execute){
+            return "execute"+baseString+" run ";
+        }else{
+            return baseString;
+        }
     }
 }

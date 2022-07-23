@@ -2,8 +2,8 @@ package Main;
 
 import java.io.*;
 import java.util.regex.*;
-
 import Elements.*;
+import Main.ContextClasses.LinePrefix;
 
 import java.util.Hashtable;
 
@@ -17,7 +17,13 @@ interface CustomFunction{
 public class Compiler{
     public static Compiler compiler; //The compiler which is being used
     private BufferedReader br;
-    private int logDepth=0; //Log depth: 0=errors, 1=warnings, 2=info, 3=verbose
+
+    //Log variables
+    private int logDepth=0; //Log depth: 0=errors, 1=warnings, 2=info, 3=verbose, 4=extraverbose
+    private int logRoutineDepth=0;
+    private String spacing="\t";
+    private boolean logPrefix=false;
+    private boolean newDirPrompt=true;
 
     public int lineInt=0; //The current line
     public int format=10; //Format of the datapack
@@ -30,13 +36,17 @@ public class Compiler{
 
     public Hashtable<String, CustomFunction> customFunctions;
 
-    private String literalCharacter="[^\\s\\.\\+\\-\\=<>]";
+    private String literalCharacter="[^\\s\\.\\+\\-\\=<>]"; //The regex used to match a literal
 
     private boolean baseCreated=false; //Wether the base of the datapack has been created or not
 
-    public Compiler(String path,int logDepth){
+    public Compiler(String path,int logDepth, boolean logPrefix, boolean newDirPrompt){
         Compiler.compiler=this;
+        LinePrefix.compiler=this;
+
         this.logDepth=logDepth;
+        this.logPrefix=logPrefix;
+        this.newDirPrompt=newDirPrompt;
         this.defaultContext=new Context(destination+name,"main", "main");
         currentContext=defaultContext;
         customFunctions=new Hashtable<String,CustomFunction>();
@@ -65,6 +75,7 @@ public class Compiler{
         });
         customFunctions.put("endcontext", (str,cmp)->{ //Switch to previous context, if there was any
             cmp.log("Returning to the previous context.",4);
+            cmp.logRoutineDepth--;
             cmp.previousContext();
         });
         customFunctions.put("folder", (str, cmp)->{ //Change folder of actual context
@@ -83,7 +94,7 @@ public class Compiler{
             }
 
             cmp.addContext();
-            cmp.currentContext.linePrefix.Add("at", entity.typeToString(cmp));
+            cmp.currentContext.linePrefix.Set("at", entity);
         });
         customFunctions.put("as", (str, cmp)->{//Execute all the context at a certain entity
             Entity entity=Entity.stringToType(str, cmp);
@@ -92,7 +103,7 @@ public class Compiler{
             }
 
             cmp.addContext();
-            cmp.currentContext.linePrefix.Add("as", entity.typeToString(cmp));
+            cmp.currentContext.linePrefix.Set("as", entity);
         });
     }
 
@@ -175,6 +186,7 @@ public class Compiler{
             if(customFunctions.get(customFunction.group(1))==null){
                 throwException("The function \""+customFunction.group(1)+"\" does not exist.");
             }
+            logRoutineDepth++;
             customFunctions.get(customFunction.group(1)).run(customFunction.group(2),this);
             return;
         }
@@ -302,17 +314,26 @@ public class Compiler{
     }
 
     //Context
-    public Context getContext(){ //Get the most recent context
+    /**
+     * Get the current context; this implicitly uses the function <code>getContext(0)</code>
+     * @return The current context.
+     */
+    public Context getContext(){
         return getContext(0);
     }
-    public Context getContext(int index){ //Get a context of choice. Context indexes go from most recent (0) to least recent.
+    /**
+     * Get a context of choice. Context indexes go from most recent (0) to least recent.
+     * @param index The index of the context to get.
+     * @return The context as the specified index if it exists. If the index is too big, the function will return null.
+     */
+    public Context getContext(int index){
         Context output=currentContext;
 
         // log(currentContext.toString(),0);
 
         for(int i=0; i<index;i++){
-            if(output.previousContext==null){ //FIXME: this should return null when context is too big.
-                return output;
+            if(output.previousContext==null){
+                return null;
             }
             output=output.previousContext;
         }
@@ -386,24 +407,50 @@ public class Compiler{
     public void log(String message, int depth){
         if(depth<=this.logDepth){
             String prefix="";
-            switch(depth){
-                case 0:
-                    prefix="EXC: ";
-                    break;
-                case 1:
-                    prefix="WRN: ";
-                    break;
-                case 2:
-                    prefix="INF: ";
-                    break;
-                case 3:
-                    prefix="VRB: ";
-                    break;
-                case 4:
-                    prefix="XVB: ";
-                    break;
+            if(logPrefix){
+                switch(depth){
+                    case 0:
+                        prefix="EXC: ";
+                        break;
+                    case 1:
+                        prefix="WRN: ";
+                        break;
+                    case 2:
+                        prefix="INF: ";
+                        break;
+                    case 3:
+                        prefix="VRB: ";
+                        break;
+                    case 4:
+                        prefix="XVB: ";
+                        break;
+                }
             }
-            System.out.println(prefix+message);
+
+            String thisSpacing="";
+            for(int i=0;i<logRoutineDepth;i++){
+                thisSpacing=thisSpacing+spacing;
+            }
+
+            System.out.println(prefix+thisSpacing+message);
+        }
+    }
+
+    public boolean prompt(String message){
+        String input="";
+        BufferedReader br=new BufferedReader(new InputStreamReader(System.in));
+        while(!input.equals("y") && !input.equals("n")){
+            System.out.print(message+" [y/n]>");
+            try{
+                input=br.readLine();
+            }catch(IOException exc){
+                throwException("An IO exception has occoured.");
+            }
+        }
+        if(input.equals("y")){
+            return true;
+        }else{
+            return false;
         }
     }
 
@@ -411,6 +458,11 @@ public class Compiler{
     public void mkdir(String path){
         File file=new File(path);
         if(!file.isDirectory()){
+            if(newDirPrompt){
+                if(!prompt("Do you wish to create the directory \""+path+"\"?")){
+                    throwException("Denied directory creation.");
+                }
+            }
             log("Creating directory \""+path+"\".",3);
             file.mkdirs();
         }
